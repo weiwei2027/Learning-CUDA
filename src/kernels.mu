@@ -3,6 +3,36 @@
 
 #include "../tester/utils.h"
 
+// ============================================================================
+// 第一题：trace 函数实现 (Moore Threads Platform)
+// ============================================================================
+
+/**
+ * @brief MUSA kernel for computing matrix trace using parallel reduction
+ */
+template <typename T>
+__global__ void traceKernel(const T* d_input, T* d_output, size_t n, size_t cols) {
+    extern __shared__ char sdata_raw[];
+    T* sdata = reinterpret_cast<T*>(sdata_raw);
+
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    sdata[tid] = (i < n) ? d_input[i * cols + i] : T(0);
+    __syncthreads();
+
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        d_output[blockIdx.x] = sdata[0];
+    }
+}
+
 /**
  * @brief Computes the trace of a matrix.
  *
@@ -19,8 +49,173 @@
  */
 template <typename T>
 T trace(const std::vector<T>& h_input, size_t rows, size_t cols) {
-  // TODO: Implement the trace function
-  return T(-1);
+    size_t n = (rows < cols) ? rows : cols;
+
+    if (n == 0) {
+        return T(0);
+    }
+
+    const int blockSize = 256;
+    const int gridSize = (n + blockSize - 1) / blockSize;
+
+    T* d_input = nullptr;
+    T* d_output = nullptr;
+    RUNTIME_CHECK(musaMalloc(&d_input, rows * cols * sizeof(T)));
+    RUNTIME_CHECK(musaMalloc(&d_output, gridSize * sizeof(T)));
+
+    RUNTIME_CHECK(musaMemcpy(d_input, h_input.data(), rows * cols * sizeof(T), musaMemcpyHostToDevice));
+
+    traceKernel<<<gridSize, blockSize, blockSize * sizeof(T)>>>(d_input, d_output, n, cols);
+    RUNTIME_CHECK(musaGetLastError());
+
+    std::vector<T> h_partial(gridSize);
+    RUNTIME_CHECK(musaMemcpy(h_partial.data(), d_output, gridSize * sizeof(T), musaMemcpyDeviceToHost));
+
+    T result = T(0);
+    for (int i = 0; i < gridSize; i++) {
+        result += h_partial[i];
+    }
+
+    RUNTIME_CHECK(musaFree(d_input));
+    RUNTIME_CHECK(musaFree(d_output));
+
+    return result;
+}
+
+
+// ============================================================================
+// 第二题：Flash Attention 函数实现 (Moore Threads Platform)
+// ============================================================================
+
+/**
+ * @brief Flash Attention MUSA kernel - 标准两遍Softmax算法
+ */
+template <typename T>
+__global__ void flashAttentionKernel(
+    const T* __restrict__ q,
+    const T* __restrict__ k,
+    const T* __restrict__ v,
+    T* __restrict__ o,
+    int batch_size,
+    int tgt_seq_len,
+    int src_seq_len,
+    int query_heads,
+    int kv_heads,
+    int head_dim,
+    bool is_causal
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    int total_threads = batch_size * tgt_seq_len * query_heads;
+    if (tid >= total_threads) return;
+
+    int batch_idx = tid / (tgt_seq_len * query_heads);
+    int rem = tid % (tgt_seq_len * query_heads);
+    int tgt_pos = rem / query_heads;
+    int head_idx = rem % query_heads;
+
+    int kv_head_idx = head_idx / (query_heads / kv_heads);
+
+    int q_stride = query_heads * head_dim;
+    int kv_stride = kv_heads * head_dim;
+    int batch_q_offset = batch_idx * tgt_seq_len * q_stride;
+    int batch_kv_offset = batch_idx * src_seq_len * kv_stride;
+
+    const T* q_ptr = q + batch_q_offset + tgt_pos * q_stride + head_idx * head_dim;
+
+    float q_local[128];
+    for (int d = 0; d < head_dim; d++) {
+        q_local[d] = static_cast<float>(q_ptr[d]);
+    }
+
+    float scale = 1.0f / sqrtf(static_cast<float>(head_dim));
+
+    int src_end = is_causal ? (tgt_pos + 1) : src_seq_len;
+
+    // ========== 第一遍：计算所有attention scores并找到最大值 ==========
+    float max_score = -INFINITY;
+
+    for (int src_pos = 0; src_pos < src_end; src_pos++) {
+        // 获取当前source位置的Key向量指针
+        const T* k_ptr = k + batch_kv_offset + src_pos * kv_stride + kv_head_idx * head_dim;
+
+        // 计算Query和Key的点积（使用float提高精度）
+        float score = 0.0f;
+        int d = 0;
+        for (; d + 3 < head_dim; d += 4) {
+            score += q_local[d] * static_cast<float>(k_ptr[d]);
+            score += q_local[d+1] * static_cast<float>(k_ptr[d+1]);
+            score += q_local[d+2] * static_cast<float>(k_ptr[d+2]);
+            score += q_local[d+3] * static_cast<float>(k_ptr[d+3]);
+        }
+        for (; d < head_dim; d++) {
+            score += q_local[d] * static_cast<float>(k_ptr[d]);
+        }
+        // 应用缩放因子
+        score *= scale;
+
+        // 存储score并更新最大值
+        if (score > max_score) {
+            max_score = score;
+        }
+    }
+
+    // ========== 第二遍：计算softmax权重和最终输出 ==========
+    // 初始化softmax分母和输出累加器
+    float sum_exp = 0.0f;           // softmax分母：所有exp(score)的和
+    float out[128];                 // 输出累加器数组
+
+    // 初始化输出数组为零
+    for (int d = 0; d < head_dim; d++) {
+        out[d] = 0.0f;
+    }
+
+    // 遍历所有source位置计算softmax权重并累加到输出
+    for (int src_pos = 0; src_pos < src_end; src_pos++) {
+        // 获取当前source位置的Key和Value向量指针
+        const T* k_ptr = k + batch_kv_offset + src_pos * kv_stride + kv_head_idx * head_dim;
+        const T* v_ptr = v + batch_kv_offset + src_pos * kv_stride + kv_head_idx * head_dim;
+
+        // 计算当前Query-Key对的attention score
+        float score = 0.0f;
+        int d = 0;
+        for (; d + 3 < head_dim; d += 4) {
+            score += q_local[d] * static_cast<float>(k_ptr[d]);
+            score += q_local[d+1] * static_cast<float>(k_ptr[d+1]);
+            score += q_local[d+2] * static_cast<float>(k_ptr[d+2]);
+            score += q_local[d+3] * static_cast<float>(k_ptr[d+3]);
+        }
+        for (; d < head_dim; d++) {
+            score += q_local[d] * static_cast<float>(k_ptr[d]);
+        }
+        score *= scale;  // 应用缩放因子
+
+        // 计算softmax权重：exp(score - max_score)以保证数值稳定性
+        float exp_score = expf(score - max_score);
+        sum_exp += exp_score;  // 累加到分母
+
+        // 使用softmax权重加权Value向量并累加到输出
+        for (int d = 0; d < head_dim; d++) {
+            out[d] += exp_score * static_cast<float>(v_ptr[d]);
+        }
+    }
+
+    // 执行最终的softmax归一化：除以分母得到最终输出
+    int d = 0;
+    for (; d + 3 < head_dim; d += 4) {
+        out[d]     /= sum_exp;
+        out[d + 1] /= sum_exp;
+        out[d + 2] /= sum_exp;
+        out[d + 3] /= sum_exp;
+    }
+    for (; d < head_dim; d++) {
+        out[d] /= sum_exp;
+    }
+
+    T* o_ptr = o + batch_q_offset + tgt_pos * q_stride + head_idx * head_dim;
+    for (int d = 0; d < head_dim; d++) {
+        o_ptr[d] = static_cast<T>(out[d]);
+    }
 }
 
 /**
@@ -42,8 +237,39 @@ T trace(const std::vector<T>& h_input, size_t rows, size_t cols) {
 template <typename T>
 void flashAttention(const std::vector<T>& h_q, const std::vector<T>& h_k,
                     const std::vector<T>& h_v, std::vector<T>& h_o,
-                    int batch_size, int target_seq_len, int src_seq_len, 
-                    int query_heads, int kv_heads, int head_dim, bool is_causal) {       
+                    int batch_size, int target_seq_len, int src_seq_len,
+                    int query_heads, int kv_heads, int head_dim, bool is_causal) {
+    size_t q_size = batch_size * target_seq_len * query_heads * head_dim * sizeof(T);
+    size_t kv_size = batch_size * src_seq_len * kv_heads * head_dim * sizeof(T);
+    size_t o_size = batch_size * target_seq_len * query_heads * head_dim * sizeof(T);
+
+    T *d_q = NULL, *d_k = NULL, *d_v = NULL, *d_o = NULL;
+    RUNTIME_CHECK(musaMalloc(&d_q, q_size));
+    RUNTIME_CHECK(musaMalloc(&d_k, kv_size));
+    RUNTIME_CHECK(musaMalloc(&d_v, kv_size));
+    RUNTIME_CHECK(musaMalloc(&d_o, o_size));
+
+    RUNTIME_CHECK(musaMemcpy(d_q, h_q.data(), q_size, musaMemcpyHostToDevice));
+    RUNTIME_CHECK(musaMemcpy(d_k, h_k.data(), kv_size, musaMemcpyHostToDevice));
+    RUNTIME_CHECK(musaMemcpy(d_v, h_v.data(), kv_size, musaMemcpyHostToDevice));
+
+    int total_threads = batch_size * target_seq_len * query_heads;
+    int blockSize = 256;
+    int gridSize = (total_threads + blockSize - 1) / blockSize;
+
+    flashAttentionKernel<<<gridSize, blockSize>>>(
+        d_q, d_k, d_v, d_o,
+        batch_size, target_seq_len, src_seq_len,
+        query_heads, kv_heads, head_dim, is_causal
+    );
+    RUNTIME_CHECK(musaGetLastError());
+
+    RUNTIME_CHECK(musaMemcpy(h_o.data(), d_o, o_size, musaMemcpyDeviceToHost));
+
+    RUNTIME_CHECK(musaFree(d_q));
+    RUNTIME_CHECK(musaFree(d_k));
+    RUNTIME_CHECK(musaFree(d_v));
+    RUNTIME_CHECK(musaFree(d_o));
 }
 
 // *********************************************************************
