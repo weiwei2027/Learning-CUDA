@@ -1,4 +1,5 @@
 #include <vector>
+#include <limits>
 #include <common/maca_fp16.h>
 
 #include "../tester/utils.h"
@@ -60,24 +61,24 @@ T trace(const std::vector<T>& h_input, size_t rows, size_t cols) {
 
     T* d_input = nullptr;
     T* d_output = nullptr;
-    RUNTIME_CHECK(cudaMalloc(&d_input, rows * cols * sizeof(T)));
-    RUNTIME_CHECK(cudaMalloc(&d_output, gridSize * sizeof(T)));
+    RUNTIME_CHECK(mcMalloc(&d_input, rows * cols * sizeof(T)));
+    RUNTIME_CHECK(mcMalloc(&d_output, gridSize * sizeof(T)));
 
-    RUNTIME_CHECK(cudaMemcpy(d_input, h_input.data(), rows * cols * sizeof(T), cudaMemcpyHostToDevice));
+    RUNTIME_CHECK(mcMemcpy(d_input, h_input.data(), rows * cols * sizeof(T), mcMemcpyHostToDevice));
 
     traceKernel<<<gridSize, blockSize, blockSize * sizeof(T)>>>(d_input, d_output, n, cols);
-    RUNTIME_CHECK(cudaGetLastError());
+    RUNTIME_CHECK(mcGetLastError());
 
     std::vector<T> h_partial(gridSize);
-    RUNTIME_CHECK(cudaMemcpy(h_partial.data(), d_output, gridSize * sizeof(T), cudaMemcpyDeviceToHost));
+    RUNTIME_CHECK(mcMemcpy(h_partial.data(), d_output, gridSize * sizeof(T), mcMemcpyDeviceToHost));
 
     T result = T(0);
     for (int i = 0; i < gridSize; i++) {
         result += h_partial[i];
     }
 
-    RUNTIME_CHECK(cudaFree(d_input));
-    RUNTIME_CHECK(cudaFree(d_output));
+    RUNTIME_CHECK(mcFree(d_input));
+    RUNTIME_CHECK(mcFree(d_output));
 
     return result;
 }
@@ -133,7 +134,7 @@ __global__ void flashAttentionKernel(
     int src_end = is_causal ? (tgt_pos + 1) : src_seq_len;
 
     // ========== 第一遍：计算所有attention scores并找到最大值 ==========
-    float max_score = -INFINITY;
+    float max_score = -std::numeric_limits<float>::infinity();
 
     for (int src_pos = 0; src_pos < src_end; src_pos++) {
         // 获取当前source位置的Key向量指针
@@ -244,14 +245,14 @@ void flashAttention(const std::vector<T>& h_q, const std::vector<T>& h_k,
     size_t o_size = batch_size * target_seq_len * query_heads * head_dim * sizeof(T);
 
     T *d_q = nullptr, *d_k = nullptr, *d_v = nullptr, *d_o = nullptr;
-    RUNTIME_CHECK(cudaMalloc(&d_q, q_size));
-    RUNTIME_CHECK(cudaMalloc(&d_k, kv_size));
-    RUNTIME_CHECK(cudaMalloc(&d_v, kv_size));
-    RUNTIME_CHECK(cudaMalloc(&d_o, o_size));
+    RUNTIME_CHECK(mcMalloc(&d_q, q_size));
+    RUNTIME_CHECK(mcMalloc(&d_k, kv_size));
+    RUNTIME_CHECK(mcMalloc(&d_v, kv_size));
+    RUNTIME_CHECK(mcMalloc(&d_o, o_size));
 
-    RUNTIME_CHECK(cudaMemcpy(d_q, h_q.data(), q_size, cudaMemcpyHostToDevice));
-    RUNTIME_CHECK(cudaMemcpy(d_k, h_k.data(), kv_size, cudaMemcpyHostToDevice));
-    RUNTIME_CHECK(cudaMemcpy(d_v, h_v.data(), kv_size, cudaMemcpyHostToDevice));
+    RUNTIME_CHECK(mcMemcpy(d_q, h_q.data(), q_size, mcMemcpyHostToDevice));
+    RUNTIME_CHECK(mcMemcpy(d_k, h_k.data(), kv_size, mcMemcpyHostToDevice));
+    RUNTIME_CHECK(mcMemcpy(d_v, h_v.data(), kv_size, mcMemcpyHostToDevice));
 
     int total_threads = batch_size * target_seq_len * query_heads;
     int blockSize = 256;
@@ -262,14 +263,14 @@ void flashAttention(const std::vector<T>& h_q, const std::vector<T>& h_k,
         batch_size, target_seq_len, src_seq_len,
         query_heads, kv_heads, head_dim, is_causal
     );
-    RUNTIME_CHECK(cudaGetLastError());
+    RUNTIME_CHECK(mcGetLastError());
 
-    RUNTIME_CHECK(cudaMemcpy(h_o.data(), d_o, o_size, cudaMemcpyDeviceToHost));
+    RUNTIME_CHECK(mcMemcpy(h_o.data(), d_o, o_size, mcMemcpyDeviceToHost));
 
-    RUNTIME_CHECK(cudaFree(d_q));
-    RUNTIME_CHECK(cudaFree(d_k));
-    RUNTIME_CHECK(cudaFree(d_v));
-    RUNTIME_CHECK(cudaFree(d_o));
+    RUNTIME_CHECK(mcFree(d_q));
+    RUNTIME_CHECK(mcFree(d_k));
+    RUNTIME_CHECK(mcFree(d_v));
+    RUNTIME_CHECK(mcFree(d_o));
 }
 
 // *********************************************************************
