@@ -1,0 +1,9 @@
+material,energy_keV,mu
+tissue_skin,50,0.2
+tissue_skin,100,0.15
+tissue_bone,50,0.5
+tissue_bone,100,0.3
+tissue_brain,50,0.18
+tissue_brain,100,0.12
+tissue_blood,50,0.22
+tissue_blood,100,0.16
