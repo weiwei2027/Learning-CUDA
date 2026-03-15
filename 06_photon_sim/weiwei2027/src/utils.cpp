@@ -507,19 +507,25 @@ int savePerformanceLog(const char *filename, double sim_time, int num_photons,
     }
     
     double photon_rate = num_photons / sim_time;
-    double speedup = cpu_baseline / sim_time;
+    bool has_cpu_baseline = (cpu_baseline > 0);
     
     fprintf(fp, "=== Photon Transport Simulation Performance Log ===\n");
     fprintf(fp, "Simulation Time: %.4f seconds\n", sim_time);
     fprintf(fp, "Total Photons: %d\n", num_photons);
     fprintf(fp, "Photon Processing Rate: %.2e photons/sec\n", photon_rate);
-    fprintf(fp, "Speedup vs CPU: %.2fx\n", speedup);
+    if (has_cpu_baseline) {
+        double speedup = cpu_baseline / sim_time;
+        fprintf(fp, "Speedup vs CPU: %.2fx\n", speedup);
+    }
     
     fclose(fp);
     
     printf("Saved performance log to %s\n", filename);
     printf("  Processing rate: %.2e photons/sec\n", photon_rate);
-    printf("  Speedup: %.2fx\n", speedup);
+    if (has_cpu_baseline) {
+        double speedup = cpu_baseline / sim_time;
+        printf("  Speedup: %.2fx\n", speedup);
+    }
     
     return 0;
 }
