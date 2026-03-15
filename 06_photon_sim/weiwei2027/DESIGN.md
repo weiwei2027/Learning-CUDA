@@ -346,7 +346,7 @@ struct Detector {
 
 **CMake配置要点**：
 - CUDA标准：C++17
-- 架构：sm_89 (RTX 4090)
+- 架构：sm_61 (GTX 1060)
 - 分离编译：启用 CUDA_SEPARABLE_COMPILATION
 - 自动拷贝 data 目录到构建目录
 
@@ -365,7 +365,7 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && make
 
 ### 7.1 基准测试结果
 
-| 指标 | CPU (单线程) | GPU (RTX 4090) | 加速比 |
+| 指标 | CPU (单线程) | GPU (GTX 1060) | 加速比 |
 |------|-------------|----------------|--------|
 | 检测率 | 4.5849% | 4.5930% | - |
 | 处理速率 | 2.19×10⁶ photons/s | 2.39×10⁹ photons/s | **~10,900×** |

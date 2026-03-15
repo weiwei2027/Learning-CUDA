@@ -1,0 +1,72 @@
+# CUDA/C++ 代码格式化配置
+# 基于 Google 风格，适配 CUDA 开发
+
+Language: Cpp
+BasedOnStyle: Google
+
+# 缩进设置
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# 行长度
+ColumnLimit: 100
+
+# 大括号风格
+BreakBeforeBraces: Attach
+
+# 函数和类
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# 命名空间
+NamespaceIndentation: None
+CompactNamespaces: false
+
+# 指针和引用对齐
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# 初始化列表
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+
+# 模板
+AlwaysBreakTemplateDeclarations: Yes
+
+# 参数和参数列表
+BinPackParameters: false
+BinPackArguments: false
+ExperimentalAutoDetectBinPacking: false
+AllowAllParametersOfDeclarationOnASingleLine: false
+
+# 注释
+ReflowComments: true
+AlignTrailingComments: true
+
+# 包含排序
+SortIncludes: true
+IncludeBlocks: Preserve
+
+# 预处理指令
+IndentPPDirectives: None
+
+# CUDA 特定
+# 保持 CUDA 核函数调用格式
+SpaceAfterCStyleCast: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+
+# 运算符
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+
+# 对齐
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: true
+AlignEscapedNewlines: Left

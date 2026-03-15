@@ -1,0 +1,43 @@
+# Build directories
+build/
+cmake-build-*/
+
+# Executables
+photon_sim_nv
+photon_sim_iluvatar
+photon_sim_metax
+photon_sim_moore
+*.exe
+
+# Output files
+output/*.bin
+output/*.txt
+output/*.log
+output/*.png
+
+# NCU/Nsight profile results (large files)
+report/ncu_results/*.ncu-rep
+report/ncu_results/*.sqlite
+report/nsys_*.nsys-rep
+report/nsys_*.sqlite
+
+# Temporary scripts
+ncu_commands.sh
+ncu_quick.sh
+ncu_run.sh
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test binaries
+tests/check_coverage
+tests/test_parser
+tests/*.o
