@@ -51,15 +51,20 @@ export REMOTE_PORT="2222"
 cd $PROJECT_DIR
 
 # 使用 rsync 上传（推荐）
+# 注意：不要排除 'photon_sim_*'，这会排除掉 src/ 目录下的源代码！
 rsync -avz --progress \
     -e "ssh -p $REMOTE_PORT -i $KEY_PATH" \
-    --exclude='build' \
-    --exclude='cmake-build-*' \
+    --exclude='build/' \
+    --exclude='cmake-build-*/' \
     --exclude='output/*.bin' \
     --exclude='output/*.log' \
-    --exclude='photon_sim_*' \
-    --exclude='.git' \
+    --exclude='photon_sim_nv' \
+    --exclude='photon_sim_cpu' \
+    --exclude='photon_sim_iluvatar' \
+    --exclude='photon_sim_metax' \
+    --exclude='photon_sim_moore' \
     --exclude='*.o' \
+    --exclude='.git/' \
     ./ \
     $REMOTE_HOST:/home/weiwei/weiwei2027/
 ```

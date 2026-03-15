@@ -49,15 +49,21 @@ echo ""
 echo -e "${YELLOW}=== Step 1: 上传代码到远程服务器 ===${NC}"
 rsync -avz --progress \
     -e "ssh -p $REMOTE_PORT -i $KEY_PATH -o StrictHostKeyChecking=no" \
-    --exclude='build' \
-    --exclude='cmake-build-*' \
+    --exclude='build/' \
+    --exclude='cmake-build-*/' \
     --exclude='output/*.bin' \
     --exclude='output/*.log' \
-    --exclude='photon_sim_*' \
-    --exclude='.git' \
+    --exclude='photon_sim_nv' \
+    --exclude='photon_sim_cpu' \
+    --exclude='photon_sim_iluvatar' \
+    --exclude='photon_sim_metax' \
+    --exclude='photon_sim_moore' \
     --exclude='*.o' \
+    --exclude='*.exe' \
+    --exclude='.git/' \
+    --exclude='.idea/' \
     --exclude='*.tar.gz' \
-    --exclude='remote_results_*' \
+    --exclude='remote_results_*/' \
     ./ \
     "$REMOTE_USER@$REMOTE_HOST:$REMOTE_WORK_DIR/"
 

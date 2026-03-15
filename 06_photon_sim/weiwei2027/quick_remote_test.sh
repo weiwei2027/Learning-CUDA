@@ -59,7 +59,9 @@ echo ""
 # 上传代码
 echo "上传代码..."
 rsync -avz -e "ssh -p $REMOTE_PORT -i $KEY_PATH -o StrictHostKeyChecking=no" \
-    --exclude='build' --exclude='cmake-build-*' --exclude='output' --exclude='.git' \
+    --exclude='build/' --exclude='cmake-build-*/' --exclude='output/' --exclude='.git/' \
+    --exclude='photon_sim_nv' --exclude='photon_sim_cpu' \
+    --exclude='*.o' --exclude='*.exe' \
     ./ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_WORK_DIR/" > /dev/null 2>&1
 
 # 执行测试
