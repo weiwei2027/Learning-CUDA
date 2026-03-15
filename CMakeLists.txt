@@ -1,9 +1,10 @@
 # Learning-CUDA 项目根 CMakeLists.txt
-# 用于 CLion 等 IDE 的 CMake 支持
+# 作用: 为 CLion 等 IDE 提供项目入口，转发到实际作品目录
+# 注意: 比赛作品位于 06_photon_sim/weiwei2027/ 目录下
 
 cmake_minimum_required(VERSION 3.18)
 
-# 先查找 CUDA 编译器，再声明项目
+# 查找 CUDA 编译器
 find_program(CMAKE_CUDA_COMPILER nvcc
     PATHS
         /usr/local/cuda/bin
@@ -14,39 +15,31 @@ find_program(CMAKE_CUDA_COMPILER nvcc
 )
 
 if(NOT CMAKE_CUDA_COMPILER)
-    message(FATAL_ERROR "CUDA compiler (nvcc) not found. Please ensure CUDA is installed and in PATH, or set CUDA_HOME environment variable.")
+    message(WARNING "CUDA compiler not found. GPU targets will not be available.")
 endif()
 
-message(STATUS "Found CUDA compiler: ${CMAKE_CUDA_COMPILER}")
+# 声明项目
+project(Learning-CUDA LANGUAGES CXX)
 
-# 现在声明项目，包含 CUDA 语言
-project(Learning-CUDA LANGUAGES CUDA CXX)
+# 启用 CUDA（如果可用）
+if(CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+    message(STATUS "CUDA enabled for IDE support")
+endif()
 
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 设置 CUDA 标准
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+# ============================================================================
+# 转发到实际作品目录
+# ============================================================================
 
-# 显式启用 CUDA 语言支持
-enable_language(CUDA)
+set(WORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/06_photon_sim/weiwei2027)
 
-# 查找 CUDA 工具包
-find_package(CUDAToolkit REQUIRED)
-
-# 设置 CUDA 架构（可以根据需要调整）
-set(CMAKE_CUDA_ARCHITECTURES 80)
-
-# 设置编译器标志
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_89")
-set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
-set(CMAKE_CUDA_FLAGS_RELEASE "-O3 --use_fast_math")
-
-# 添加子项目
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/06_photon_sim/weiwei2027/CMakeLists.txt)
-    add_subdirectory(06_photon_sim/weiwei2027)
+if(EXISTS ${WORK_DIR}/CMakeLists.txt)
+    message(STATUS "Loading project from: ${WORK_DIR}")
+    add_subdirectory(${WORK_DIR})
+else()
+    message(WARNING "Project not found at: ${WORK_DIR}")
 endif()
-
-message(STATUS "CUDA configuration completed successfully")
