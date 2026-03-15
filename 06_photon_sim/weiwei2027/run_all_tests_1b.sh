@@ -1,12 +1,17 @@
 #!/bin/bash
-# A100 完整测试脚本 - 默认使用 10亿光子 (1b)
+# 完整测试脚本 - 支持多平台 (NVIDIA/Iluvatar/MetaX/Moore)
+# 默认使用 10亿光子 (1b)
 # 作者: weiwei2027
 # 日期: 2026-03-15
 
 set -e  # 遇到错误退出
 
+# 平台选择
+PLATFORM=${PLATFORM:-nvidia}
+
 echo "========================================"
-echo "光子传输模拟 - A100 完整测试 (10亿光子)"
+echo "光子传输模拟 - 完整测试 (10亿光子)"
+echo "平台: $PLATFORM"
 echo "========================================"
 echo ""
 
@@ -14,19 +19,69 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 根据平台设置可执行文件和命令
+case $PLATFORM in
+    nvidia)
+        GPU_BINARY="./photon_sim_nv"
+        CPU_BINARY="./photon_sim_cpu"
+        GPU_INFO_CMD="nvidia-smi"
+        COMPILER_INFO_CMD="nvcc --version"
+        ;;
+    metax)
+        GPU_BINARY="./photon_sim_metax"
+        CPU_BINARY="./photon_sim_cpu"
+        GPU_INFO_CMD="echo 'MetaX GPU info not available'"
+        COMPILER_INFO_CMD="mxcc --version 2>/dev/null || echo 'mxcc version not available'"
+        ;;
+    iluvatar)
+        GPU_BINARY="./photon_sim_iluvatar"
+        CPU_BINARY="./photon_sim_cpu"
+        GPU_INFO_CMD="echo 'Iluvatar GPU info not available'"
+        COMPILER_INFO_CMD="clang++ --version"
+        ;;
+    moore)
+        GPU_BINARY="./photon_sim_moore"
+        CPU_BINARY="./photon_sim_cpu"
+        GPU_INFO_CMD="echo 'Moore GPU info not available'"
+        COMPILER_INFO_CMD="mcc --version 2>/dev/null || echo 'mcc version not available'"
+        ;;
+    *)
+        echo "错误: 未知平台 $PLATFORM"
+        echo "支持的平台: nvidia, metax, iluvatar, moore"
+        exit 1
+        ;;
+esac
+
 echo "测试目录: $SCRIPT_DIR"
+echo "平台: $PLATFORM"
 echo "光子数量: 10亿 (1,000,000,000)"
-echo "警告: 完整测试可能需要 5-10 分钟"
 echo ""
 
+# 检查可执行文件
+if [ ! -f "$GPU_BINARY" ]; then
+    echo "错误: 找不到 GPU 可执行文件 $GPU_BINARY"
+    echo "请先编译: make PLATFORM=$PLATFORM"
+    exit 1
+fi
+
+if [ ! -f "$CPU_BINARY" ]; then
+    echo "警告: 找不到 CPU 可执行文件 $CPU_BINARY"
+    echo "CPU 测试将被跳过"
+    HAS_CPU=0
+else
+    HAS_CPU=1
+fi
+
 # 创建输出目录
-mkdir -p output/{1layer_gpu,3layer_gpu,3layer_sphere_gpu,parallel_gpu,sphere_1center_gpu,sphere_2center_gpu}
-mkdir -p output/{1layer_cpu,3layer_cpu,3layer_sphere_cpu,parallel_cpu}
+mkdir -p output/{1layer_gpu,3layer_gpu,3layer_sphere_gpu,parallel_gpu}
+if [ $HAS_CPU -eq 1 ]; then
+    mkdir -p output/{1layer_cpu,3layer_cpu,3layer_sphere_cpu,parallel_cpu}
+fi
 mkdir -p output/env_info
 
 echo "=== 1. 记录环境信息 ==="
 
-# CPU 信息
+# 系统信息
 echo "--- CPU Information ---" > output/env_info/system_info.txt
 echo "CPU Model:" >> output/env_info/system_info.txt
 lscpu | grep "Model name" >> output/env_info/system_info.txt 2>/dev/null || echo "Unknown" >> output/env_info/system_info.txt
@@ -39,59 +94,47 @@ free -h >> output/env_info/system_info.txt 2>/dev/null || echo "Unknown" >> outp
 # GPU 信息
 echo "" >> output/env_info/system_info.txt
 echo "--- GPU Information ---" >> output/env_info/system_info.txt
-nvidia-smi >> output/env_info/system_info.txt 2>/dev/null || echo "nvidia-smi not available" >> output/env_info/system_info.txt
+$GPU_INFO_CMD >> output/env_info/system_info.txt 2>/dev/null || echo "GPU info not available" >> output/env_info/system_info.txt
 
 echo "" >> output/env_info/system_info.txt
-echo "--- CUDA Version ---" >> output/env_info/system_info.txt
-nvcc --version >> output/env_info/system_info.txt 2>/dev/null || echo "nvcc not available" >> output/env_info/system_info.txt
+echo "--- Compiler Version ---" >> output/env_info/system_info.txt
+$COMPILER_INFO_CMD >> output/env_info/system_info.txt 2>/dev/null || echo "Compiler info not available" >> output/env_info/system_info.txt
 
-echo "环境信息已保存"
+echo "环境信息已保存到 output/env_info/system_info.txt"
+cat output/env_info/system_info.txt
 echo ""
 
-# 检查可执行文件
-if [ ! -f "./photon_sim_nv" ]; then
-    echo "错误: 找不到 GPU 可执行文件 photon_sim_nv"
-    exit 1
-fi
-
-if [ ! -f "./photon_sim_cpu" ]; then
-    echo "警告: 找不到 CPU 可执行文件 photon_sim_cpu"
-    HAS_CPU=0
-else
-    HAS_CPU=1
-fi
-
 echo "========================================"
-echo "=== GPU 测试 (NVIDIA A100) - 10亿光子 ==="
+echo "=== GPU 测试 ($PLATFORM) - 10亿光子 ==="
 echo "========================================"
 echo ""
 
-echo "--- Test 1: 单层几何 (1B photons) ---"
-./photon_sim_nv \
+echo "--- Test 1: 单层几何 (GPU, 1B photons) ---"
+$GPU_BINARY \
     -g data/geometry_1layer.txt \
     -m data/materials.csv \
     -s data/source_point_1b.txt \
     -o output/1layer_gpu/
 echo ""
 
-echo "--- Test 2: 三层几何 (1B photons) ---"
-./photon_sim_nv \
+echo "--- Test 2: 三层几何 (GPU, 1B photons) ---"
+$GPU_BINARY \
     -g data/geometry_3layer.txt \
     -m data/materials.csv \
     -s data/source_point_1b.txt \
     -o output/3layer_gpu/
 echo ""
 
-echo "--- Test 3: 三层+球体 (1B photons) ---"
-./photon_sim_nv \
+echo "--- Test 3: 三层+球体 (GPU, 1B photons) ---"
+$GPU_BINARY \
     -g data/geometry_3layer_sphere.txt \
     -m data/materials.csv \
     -s data/source_point_1b.txt \
     -o output/3layer_sphere_gpu/
 echo ""
 
-echo "--- Test 4: 平行束模式 (1B photons) ---"
-./photon_sim_nv \
+echo "--- Test 4: 平行束模式 (GPU, 1B photons) ---"
+$GPU_BINARY \
     -g data/geometry_3layer.txt \
     -m data/materials.csv \
     -s data/source_parallel_1b.txt \
@@ -105,7 +148,7 @@ if [ $HAS_CPU -eq 1 ]; then
     echo ""
     
     echo "--- Test 5: 单层几何 (CPU, 1B photons) ---"
-    ./photon_sim_cpu \
+    $CPU_BINARY \
         -g data/geometry_1layer.txt \
         -m data/materials.csv \
         -s data/source_point_1b.txt \
@@ -113,7 +156,7 @@ if [ $HAS_CPU -eq 1 ]; then
     echo ""
     
     echo "--- Test 6: 三层几何 (CPU, 1B photons) ---"
-    ./photon_sim_cpu \
+    $CPU_BINARY \
         -g data/geometry_3layer.txt \
         -m data/materials.csv \
         -s data/source_point_1b.txt \
@@ -121,7 +164,7 @@ if [ $HAS_CPU -eq 1 ]; then
     echo ""
     
     echo "--- Test 7: 三层+球体 (CPU, 1B photons) ---"
-    ./photon_sim_cpu \
+    $CPU_BINARY \
         -g data/geometry_3layer_sphere.txt \
         -m data/materials.csv \
         -s data/source_point_1b.txt \
@@ -129,7 +172,7 @@ if [ $HAS_CPU -eq 1 ]; then
     echo ""
     
     echo "--- Test 8: 平行束模式 (CPU, 1B photons) ---"
-    ./photon_sim_cpu \
+    $CPU_BINARY \
         -g data/geometry_3layer.txt \
         -m data/materials.csv \
         -s data/source_parallel_1b.txt \
@@ -144,8 +187,8 @@ echo ""
 
 echo "--- GPU 测试结果 (10亿光子) ---"
 echo ""
-printf "%-25s %-15s %-20s %-15s\n" "Test" "Time (s)" "Rate (photons/s)" "Detected"
-printf "%-25s %-15s %-20s %-15s\n" "--------------------" "---------------" "--------------------" "---------------"
+printf "%-30s %-15s %-20s %-15s\n" "Test" "Time (s)" "Rate (photons/s)" "Detected"
+printf "%-30s %-15s %-20s %-15s\n" "------------------------------" "---------------" "--------------------" "---------------"
 
 for dir in output/1layer_gpu output/3layer_gpu output/3layer_sphere_gpu output/parallel_gpu; do
     if [ -f "$dir/performance.log" ]; then
@@ -153,7 +196,7 @@ for dir in output/1layer_gpu output/3layer_gpu output/3layer_sphere_gpu output/p
         time=$(grep "Time:" "$dir/performance.log" | awk '{print $2}')
         rate=$(grep "Processing rate:" "$dir/performance.log" | awk '{print $3}')
         detected=$(grep "Detected:" "$dir/performance.log" | head -1 | awk '{print $2}')
-        printf "%-25s %-15s %-20s %-15s\n" "$test_name" "$time" "$rate" "$detected"
+        printf "%-30s %-15s %-20s %-15s\n" "$test_name" "$time" "$rate" "$detected"
     fi
 done
 
@@ -161,8 +204,8 @@ if [ $HAS_CPU -eq 1 ]; then
     echo ""
     echo "--- CPU 测试结果 (10亿光子) ---"
     echo ""
-    printf "%-25s %-15s %-20s %-15s\n" "Test" "Time (s)" "Rate (photons/s)" "Detected"
-    printf "%-25s %-15s %-20s %-15s\n" "--------------------" "---------------" "--------------------" "---------------"
+    printf "%-30s %-15s %-20s %-15s\n" "Test" "Time (s)" "Rate (photons/s)" "Detected"
+    printf "%-30s %-15s %-20s %-15s\n" "------------------------------" "---------------" "--------------------" "---------------"
     
     for dir in output/1layer_cpu output/3layer_cpu output/3layer_sphere_cpu output/parallel_cpu; do
         if [ -f "$dir/performance.log" ]; then
@@ -170,7 +213,7 @@ if [ $HAS_CPU -eq 1 ]; then
             time=$(grep "Time:" "$dir/performance.log" | awk '{print $2}')
             rate=$(grep "Processing rate:" "$dir/performance.log" | awk '{print $3}')
             detected=$(grep "Detected:" "$dir/performance.log" | head -1 | awk '{print $2}')
-            printf "%-25s %-15s %-20s %-15s\n" "$test_name" "$time" "$rate" "$detected"
+            printf "%-30s %-15s %-20s %-15s\n" "$test_name" "$time" "$rate" "$detected"
         fi
     done
     
@@ -180,7 +223,6 @@ if [ $HAS_CPU -eq 1 ]; then
     printf "%-25s %-15s %-15s %-15s\n" "Test" "GPU Time" "CPU Time" "Speedup"
     printf "%-25s %-15s %-15s %-15s\n" "--------------------" "---------------" "---------------" "---------------"
     
-    # 计算加速比
     for test in 1layer 3layer 3layer_sphere parallel; do
         if [ -f "output/${test}_gpu/performance.log" ] && [ -f "output/${test}_cpu/performance.log" ]; then
             gpu_time=$(grep "Time:" "output/${test}_gpu/performance.log" | awk '{print $2}')
@@ -200,7 +242,7 @@ echo "========================================"
 
 # 保存汇总到文件
 {
-    echo "光子传输模拟 - A100 测试汇总 (10亿光子)"
+    echo "光子传输模拟 - $PLATFORM 测试汇总 (10亿光子)"
     echo "生成时间: $(date)"
     echo "========================================"
     echo ""
@@ -247,7 +289,7 @@ echo "========================================"
         fi
     done
     
-} > output/test_summary_1b.txt
+} > output/test_summary_${PLATFORM}_1b.txt
 
 echo ""
-echo "详细汇总已保存到: output/test_summary_1b.txt"
+echo "详细汇总已保存到: output/test_summary_${PLATFORM}_1b.txt"

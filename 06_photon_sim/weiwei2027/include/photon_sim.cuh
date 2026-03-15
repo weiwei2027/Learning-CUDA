@@ -20,7 +20,7 @@
 #if defined(METAX_PLATFORM)
     // ==================== MetaX 平台 (沐曦) ====================
     #include <mcr/mc_runtime.h>
-    #include <mcr/mcrand_kernel.h>
+    #include <mcrand/mcrand_kernel.h>
     
     // MetaX 运行时 API 映射
     #define gpuMalloc mcMalloc
@@ -34,6 +34,7 @@
     #define gpuGetLastError mcGetLastError
     #define gpuGetErrorString mcGetErrorString
     #define gpuMemcpyToSymbolAsync mcMemcpyToSymbolAsync
+    #define gpuStream_t mcStream_t
     
     // MetaX 随机数
     #define gpuRandState mcrandState
@@ -63,6 +64,7 @@
     #define gpuGetLastError musaGetLastError
     #define gpuGetErrorString musaGetErrorString
     #define gpuMemcpyToSymbolAsync musaMemcpyToSymbolAsync
+    #define gpuStream_t musaStream_t
     
     // Moore 随机数
     #define gpuRandState musa_randState
@@ -92,6 +94,7 @@
     #define gpuGetLastError cudaGetLastError
     #define gpuGetErrorString cudaGetErrorString
     #define gpuMemcpyToSymbolAsync cudaMemcpyToSymbolAsync
+    #define gpuStream_t cudaStream_t
     
     // Iluvatar 随机数
     #define gpuRandState curandState
@@ -121,6 +124,7 @@
     #define gpuGetLastError cudaGetLastError
     #define gpuGetErrorString cudaGetErrorString
     #define gpuMemcpyToSymbolAsync cudaMemcpyToSymbolAsync
+    #define gpuStream_t cudaStream_t
     
     // NVIDIA 随机数
     #define gpuRandState curandState

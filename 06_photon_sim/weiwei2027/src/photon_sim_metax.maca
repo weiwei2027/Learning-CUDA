@@ -1,11 +1,11 @@
 /**
- * @file photon_sim_nv.cpp
- * @brief NVIDIA CUDA 光子传输模拟 - 平台特定实现
+ * @file photon_sim_metax.maca
+ * @brief MetaX 沐曦 C500 光子传输模拟 - 平台特定实现
  * @author weiwei2027
  * 
- * 对应平台: NVIDIA GPU (A100, RTX系列等)
- * 编译器: nvcc
- * 运行时: CUDA Runtime
+ * 对应平台: MetaX C500 (沐曦集成电路)
+ * 编译器: mxcc
+ * 运行时: MCR (MetaX Compute Runtime)
  */
 
 #include <iostream>
@@ -13,8 +13,9 @@
 #include <chrono>
 #include <cstring>
 #include <cmath>
-#include <cuda_runtime.h>
-#include <curand_kernel.h>
+
+// 平台抽象头文件
+#include "../include/photon_sim.cuh"
 #include "../include/types.h"
 #include "../include/utils.h"
 
@@ -274,23 +275,23 @@ void prepareSphereIndices(const Region *regions, int num_regions,
 }
 
 void copyGeometryToConstant(const Region *h_regions, const float *h_mu,
-                            int num_regions, cudaStream_t stream = 0)
+                            int num_regions, gpuStream_t stream = 0)
 {
     int sphere_indices[MAX_SPHERES];
     int num_spheres;
     prepareSphereIndices(h_regions, num_regions, sphere_indices, num_spheres);
 
-    GPU_CHECK(gpuMemcpyToSymbolAsync(d_const_regions, h_regions,
+    GPU_CHECK(gpuMemcpyToSymbolAsync((const void*)&d_const_regions, h_regions,
                                        num_regions * sizeof(Region), 0,
                                        gpuMemcpyHostToDevice, stream));
-    GPU_CHECK(gpuMemcpyToSymbolAsync(d_const_mu, h_mu,
+    GPU_CHECK(gpuMemcpyToSymbolAsync((const void*)&d_const_mu, h_mu,
                                        num_regions * sizeof(float), 0,
                                        gpuMemcpyHostToDevice, stream));
-    GPU_CHECK(gpuMemcpyToSymbolAsync(d_const_num_regions, &num_regions,
+    GPU_CHECK(gpuMemcpyToSymbolAsync((const void*)&d_const_num_regions, &num_regions,
                                        sizeof(int), 0, gpuMemcpyHostToDevice, stream));
-    GPU_CHECK(gpuMemcpyToSymbolAsync(d_const_num_spheres, &num_spheres,
+    GPU_CHECK(gpuMemcpyToSymbolAsync((const void*)&d_const_num_spheres, &num_spheres,
                                        sizeof(int), 0, gpuMemcpyHostToDevice, stream));
-    GPU_CHECK(gpuMemcpyToSymbolAsync(d_const_sphere_indices, sphere_indices,
+    GPU_CHECK(gpuMemcpyToSymbolAsync((const void*)&d_const_sphere_indices, sphere_indices,
                                        num_spheres * sizeof(int), 0,
                                        gpuMemcpyHostToDevice, stream));
 }

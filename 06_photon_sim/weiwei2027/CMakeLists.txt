@@ -82,9 +82,9 @@ elseif(PLATFORM STREQUAL "iluvatar")
     
 elseif(PLATFORM STREQUAL "metax")
     # 沐曦 MetaX
-    message(STATUS "Note: MetaX requires mxcc compiler")
+    message(STATUS "Building for MetaX platform")
     set(CMAKE_CUDA_COMPILER mxcc)
-    set(CMAKE_CUDA_FLAGS "--cuda-gpu-arch=metax-c500")
+    set(CMAKE_CUDA_STANDARD 17)
     set(MAIN_SRC src/photon_sim_metax.maca)
     set(TARGET_NAME photon_sim_metax)
     

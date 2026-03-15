@@ -40,8 +40,8 @@ else ifeq ($(PLATFORM),iluvatar)
 else ifeq ($(PLATFORM),metax)
     # MetaX C500 (沐曦)
     CXX = mxcc
-    CXXFLAGS = -O3 --cuda-gpu-arch=metax-c500 -std=c++17 -DMETAX_PLATFORM $(INCLUDES)
-    LDFLAGS = -lmcudart -lmcrand
+    CXXFLAGS = -std=c++17 -O3 -DMETAX_PLATFORM $(INCLUDES) -I/opt/maca/include
+    LDFLAGS = -L/opt/maca/lib
     MAIN_SRC = src/photon_sim_metax.maca
     TARGET = photon_sim_metax
     
@@ -58,7 +58,8 @@ else
 endif
 
 # 对象文件
-MAIN_OBJ = $(BUILD_DIR)/$(notdir $(MAIN_SRC:.cu=.o))
+# 对象文件（支持 .cu, .maca, .mu 等多种扩展名）
+MAIN_OBJ = $(BUILD_DIR)/$(basename $(notdir $(MAIN_SRC))).o
 UTILS_OBJ = $(BUILD_DIR)/utils.o
 OBJS = $(MAIN_OBJ) $(UTILS_OBJ)
 
