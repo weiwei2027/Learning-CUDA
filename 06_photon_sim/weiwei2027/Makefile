@@ -22,8 +22,9 @@ UTILS_SRC = src/utils.cpp
 
 ifeq ($(PLATFORM),nvidia)
     # NVIDIA CUDA
+    # 支持多架构: A100 (sm_80), RTX 4090 (sm_89)
     CXX = nvcc
-    CXXFLAGS = -O3 -arch=sm_89 -std=c++17 $(INCLUDES)
+    CXXFLAGS = -O3 -gencode arch=compute_80,code=sm_80 -gencode arch=compute_89,code=sm_89 -std=c++17 $(INCLUDES)
     LDFLAGS = -lcuda -lcudart -lcurand
     MAIN_SRC = src/photon_sim_nv.cu
     TARGET = photon_sim_nv
@@ -61,13 +62,23 @@ MAIN_OBJ = $(BUILD_DIR)/$(notdir $(MAIN_SRC:.cu=.o))
 UTILS_OBJ = $(BUILD_DIR)/utils.o
 OBJS = $(MAIN_OBJ) $(UTILS_OBJ)
 
+# CPU 版本
+CPU_TARGET = photon_sim_cpu
+CPU_SRC = src/photon_sim_cpu.cpp
+CPU_OBJ = $(BUILD_DIR)/photon_sim_cpu.o
+CPU_UTILS_OBJ = $(BUILD_DIR)/utils_cpu.o
+
 # ============================================================================
 # 构建规则
 # ============================================================================
 
 .PHONY: all clean run help
 
-all: $(BUILD_DIR) $(TARGET)
+# 默认目标: 同时编译 GPU 和 CPU 版本
+all: $(BUILD_DIR) $(TARGET) $(CPU_TARGET)
+
+# 只编译 GPU 版本
+gpu_only: $(BUILD_DIR) $(TARGET)
 
 help:
 	@echo "Usage: make PLATFORM=<platform> [target]"
@@ -79,15 +90,20 @@ help:
 	@echo "  moore     - 摩尔线程 MTT S5000 (mcc)"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all       - Build the target (default)"
-	@echo "  clean     - Clean build files"
-	@echo "  run       - Build and run with default settings"
-	@echo "  help      - Show this help"
+	@echo "  all          - Build both GPU and CPU (default)"
+	@echo "  photon_sim_cpu - Build CPU baseline"
+	@echo "  gpu_only     - Build only GPU version"
+	@echo "  clean        - Clean build files"
+	@echo "  run          - Build and run GPU version"
+	@echo "  run_cpu      - Build and run CPU version"
+	@echo "  help         - Show this help"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make PLATFORM=nvidia"
-	@echo "  make PLATFORM=iluvatar run"
-	@echo "  make PLATFORM=metax clean"
+	@echo "  make                    # Build both GPU and CPU (default)"
+	@echo "  make gpu_only           # Build only GPU version"
+	@echo "  make photon_sim_cpu     # Build only CPU version"
+	@echo "  make run                # Build and run GPU"
+	@echo "  make run_cpu            # Build and run CPU"
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -122,10 +138,32 @@ else ifeq ($(PLATFORM),moore)
 	$(CXX) $(CXXFLAGS) -x musa -c $< -o $@
 endif
 
+# ============================================================================
+# CPU 基准版本
+# ============================================================================
+
+$(CPU_TARGET): $(CPU_OBJ) $(CPU_UTILS_OBJ)
+	g++ -O3 -std=c++17 -o $@ $^ $(INCLUDES)
+
+$(CPU_OBJ): $(CPU_SRC) | $(BUILD_DIR)
+	g++ -O3 -std=c++17 -c $< -o $@ $(INCLUDES)
+
+$(CPU_UTILS_OBJ): $(UTILS_SRC) | $(BUILD_DIR)
+	g++ -O3 -std=c++17 -c $< -o $@ $(INCLUDES)
+
+# CPU 运行目标
+run_cpu: $(CPU_TARGET)
+	./$(CPU_TARGET) -g data/geometry_3layer.txt -m data/materials.csv \
+		-s data/source_point_10m.txt -o $(OUTPUT_DIR)/
+
+# 同时编译 GPU 和 CPU 版本
+all_with_cpu: all $(CPU_TARGET)
+
 clean:
 	rm -rf build
 	rm -f photon_sim_nv photon_sim_iluvatar photon_sim_metax photon_sim_moore
-	rm -f $(OUTPUT_DIR)/*.bin $(OUTPUT_DIR)/*.txt $(OUTPUT_DIR)/*.log
+	rm -f $(CPU_TARGET)
+	rm -f $(OUTPUT_DIR)/*.bin $(OUTPUT_DIR)/*.txt $(OUTPUT_DIR)/*.log 2>/dev/null || true
 
 run: all
 	./$(TARGET) -g data/geometry_3layer.txt -m data/materials.csv \

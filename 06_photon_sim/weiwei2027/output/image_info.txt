@@ -1,4 +1,0 @@
-width=1024
-height=1024
-dtype=float32
-format=binary
