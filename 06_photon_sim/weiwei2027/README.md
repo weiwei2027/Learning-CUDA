@@ -298,3 +298,30 @@ detector_pixels = 1024 1024            # 像素分辨率
 
 **项目时间**: 2025.2.10 - 2025.3.16  
 **提交地址**: Learning-CUDA 2025-winter-project 分支 /06_photon_sim/weiwei2027/
+
+---
+
+## 远程平台测试
+
+### A100 服务器测试
+
+```bash
+# 1. 一键测试（完整测试，约10分钟）
+./run_remote_tests.sh
+
+# 2. 快速测试（单个测试，约2分钟）
+./quick_remote_test.sh 3layer
+
+# 3. 手动测试
+# 上传
+rsync -avz -e "ssh -p 2222 -i ~/workspace/InfiniTensor2025/ssh/nvidia/key.id" \
+    ./ weiwei@8.145.51.96:/home/weiwei/weiwei2027/
+
+# 远程构建和测试
+ssh -p 2222 -i ~/workspace/InfiniTensor2025/ssh/nvidia/key.id weiwei@8.145.51.96
+cd /home/weiwei/weiwei2027
+make PLATFORM=nvidia
+./photon_sim_nv -g data/geometry_3layer.txt -m data/materials.csv -s data/source_point_10m.txt -o output/
+```
+
+详细说明见: [remote_test_guide.md](remote_test_guide.md)

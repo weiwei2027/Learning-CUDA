@@ -1,5 +1,6 @@
 # Build directories
 build/
+build_test/
 cmake-build-*/
 
 # Executables
@@ -7,24 +8,18 @@ photon_sim_nv
 photon_sim_iluvatar
 photon_sim_metax
 photon_sim_moore
+photon_sim_cpu
 *.exe
 
 # Output files
 output/*.bin
-output/*.txt
 output/*.log
-output/*.png
+output/*/
+!output/.gitkeep
 
-# NCU/Nsight profile results (large files)
-report/ncu_results/*.ncu-rep
-report/ncu_results/*.sqlite
-report/nsys_*.nsys-rep
-report/nsys_*.sqlite
-
-# Temporary scripts
-ncu_commands.sh
-ncu_quick.sh
-ncu_run.sh
+# Results directory (local test results)
+results/
+remote_results_*/
 
 # IDE
 .idea/
@@ -41,3 +36,13 @@ Thumbs.db
 tests/check_coverage
 tests/test_parser
 tests/*.o
+
+# NCU profile results (large files)
+report/ncu_results/*.ncu-rep
+report/ncu_results/*.sqlite
+report/nsys_*.nsys-rep
+report/nsys_*.sqlite
+
+# Temporary files
+*.tar.gz
+*.tmp
