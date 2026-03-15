@@ -1,0 +1,12 @@
+# X射线源参数配置 - 平行束模式 (1000万光子)
+# 适用于：快速功能验证测试
+
+source_type = parallel
+position = 0.0 0.0 -1.0          # 源平面位置 (x,y,z) cm
+direction = 0.0 0.0 1.0          # 光束方向（平行）
+energy = 50.0
+num_photons = 10000000
+
+detector_position = 0.0 0.0 17.5
+detector_size = 20.0 20.0
+detector_pixels = 1024 1024

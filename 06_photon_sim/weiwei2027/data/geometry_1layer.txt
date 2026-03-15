@@ -1,0 +1,2 @@
+# 单层测试
+layer skin 1.0 0.0 0.0 0.0 tissue_skin

@@ -429,9 +429,9 @@ int main(int argc, char** argv)
     std::cout << "========================================" << std::endl;
 
     // 默认文件路径
-    const char* geometry_file = "data/geometry.txt";
+    const char* geometry_file = "data/geometry_3layer.txt";
     const char* material_file = "data/materials.csv";
-    const char* source_file = "data/source.txt";
+    const char* source_file = "data/source_point_10m.txt";
     const char* output_dir = "output/";
 
     // 解析命令行参数

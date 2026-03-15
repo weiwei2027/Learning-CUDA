@@ -1,6 +1,6 @@
 # 头部几何模型（带球体异物）
 # 格式: type name thickness x_start y_start z_start material
-# 注意: 平板层参数与 geometry.txt 完全一致
+# 注意: 平板层参数与 geometry_3layer.txt 完全一致
 
 # 皮肤层: 厚度 0.2 cm, 从 z=0 开始
 layer skin 0.2 0.0 0.0 0.0 tissue_skin
@@ -11,7 +11,8 @@ layer skull 0.8 0.0 0.0 0.2 tissue_bone
 # 脑组织层: 厚度 16.0 cm, 从 z=1.0 开始
 layer brain 16.0 0.0 0.0 1.0 tissue_brain
 
-# 血块异物: 半径 0.5 cm, 球心在 (0.0, 0.0, 5.0)
+# 血块异物: 半径 2.0 cm, 球心在 (0.0, 0.0, 5.0)
 # 位于脑组织中央(z=5cm)，光路中心，模拟颅内出血
 # 注: 比赛示例为(5,5,5)，但当前光源发散角较小，移至(0,0,5)以验证功能
-sphere hematoma 0.5 0.0 0.0 5.0 tissue_blood
+# 半径 2.0 cm 可在探测器上形成明显阴影，便于验证球体相交算法
+sphere hematoma 2.0 0.0 0.0 5.0 tissue_blood

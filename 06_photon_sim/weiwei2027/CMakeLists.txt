@@ -108,9 +108,9 @@ target_compile_options(test_parser PRIVATE -O2 -Wall)
 # 运行主程序
 add_custom_target(run_photon_sim
     COMMAND $<TARGET_FILE:photon_sim>
-        -g ${CMAKE_CURRENT_SOURCE_DIR}/data/geometry.txt
+        -g ${CMAKE_CURRENT_SOURCE_DIR}/data/geometry_3layer.txt
         -m ${CMAKE_CURRENT_SOURCE_DIR}/data/materials.csv
-        -s ${CMAKE_CURRENT_SOURCE_DIR}/data/source.txt
+        -s ${CMAKE_CURRENT_SOURCE_DIR}/data/source_point_10m.txt
         -o ${CMAKE_CURRENT_SOURCE_DIR}/output/
     DEPENDS photon_sim
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

@@ -1,10 +1,11 @@
-# X射线源参数配置
+# X射线源参数配置 - 点光源模式 (1亿光子)
+# 适用于：标准性能测试
 
 source_type = point
 position = 0.0 0.0 -1.0
 direction = 0.0 0.0 1.0
 energy = 50.0
-num_photons = 10000000
+num_photons = 100000000
 
 detector_position = 0.0 0.0 17.5
 detector_size = 20.0 20.0
