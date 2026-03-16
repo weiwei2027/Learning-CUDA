@@ -32,8 +32,8 @@ ifeq ($(PLATFORM),nvidia)
 else ifeq ($(PLATFORM),iluvatar)
     # Iluvatar CoreX (天数智芯)
     CXX = clang++
-    CXXFLAGS = -O3 --cuda-gpu-arch=BI100 -std=c++17 -DILUVATAR_PLATFORM $(INCLUDES)
-    LDFLAGS = -lcudart -lcurand
+    CXXFLAGS = -std=c++17 -O3 -DPLATFORM_ILUVATAR $(INCLUDES) -I/usr/local/corex/include -fPIC
+    LDFLAGS = -lcudart -L/usr/local/corex/lib64
     MAIN_SRC = src/photon_sim_iluvatar.cu
     TARGET = photon_sim_iluvatar
     
@@ -118,7 +118,7 @@ $(MAIN_OBJ): $(MAIN_SRC)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 else ifeq ($(PLATFORM),iluvatar)
 $(MAIN_OBJ): $(MAIN_SRC)
-	$(CXX) $(CXXFLAGS) -x cuda -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 else ifeq ($(PLATFORM),metax)
 $(MAIN_OBJ): $(MAIN_SRC)
 	$(CXX) $(CXXFLAGS) -x maca -c $< -o $@
@@ -132,7 +132,7 @@ $(UTILS_OBJ): $(UTILS_SRC) | $(BUILD_DIR)
 ifeq ($(PLATFORM),nvidia)
 	$(CXX) $(CXXFLAGS) -x cu -c $< -o $@
 else ifeq ($(PLATFORM),iluvatar)
-	$(CXX) $(CXXFLAGS) -x cuda -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 else ifeq ($(PLATFORM),metax)
 	$(CXX) $(CXXFLAGS) -x maca -c $< -o $@
 else ifeq ($(PLATFORM),moore)

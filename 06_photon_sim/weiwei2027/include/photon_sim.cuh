@@ -77,7 +77,7 @@
     // 平台名称
     #define PLATFORM_NAME "Moore (摩尔线程 MTT S5000)"
     
-#elif defined(ILUVATAR_PLATFORM)
+#elif defined(PLATFORM_ILUVATAR)
     // ==================== Iluvatar 平台 (天数智芯) ====================
     #include <cuda_runtime.h>
     #include <curand_kernel.h>
