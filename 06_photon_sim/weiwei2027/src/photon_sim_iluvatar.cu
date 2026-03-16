@@ -13,8 +13,7 @@
 #include <chrono>
 #include <cstring>
 #include <cmath>
-#include <cuda_runtime.h>
-#include <curand_kernel.h>
+#include "../include/photon_sim.cuh"
 #include "../include/types.h"
 #include "../include/utils.h"
 
