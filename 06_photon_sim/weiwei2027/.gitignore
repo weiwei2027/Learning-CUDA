@@ -46,3 +46,4 @@ report/nsys_*.sqlite
 # Temporary files
 *.tar.gz
 *.tmp
+report/REPORT.pdf
