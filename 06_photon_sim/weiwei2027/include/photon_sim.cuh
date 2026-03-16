@@ -47,7 +47,7 @@
     // 平台名称
     #define PLATFORM_NAME "MetaX (沐曦 C500)"
     
-#elif defined(MOORE_PLATFORM)
+#elif defined(PLATFORM_MOORE)
     // ==================== Moore 平台 (摩尔线程) ====================
     #include <musa_runtime.h>
     #include <musa_curand.h>

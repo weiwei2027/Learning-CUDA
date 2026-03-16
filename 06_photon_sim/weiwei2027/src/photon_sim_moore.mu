@@ -3,9 +3,9 @@
  * @brief NVIDIA CUDA 光子传输模拟 - 平台特定实现
  * @author weiwei2027
  * 
- * 对应平台: NVIDIA GPU (A100, RTX系列等)
- * 编译器: nvcc
- * 运行时: CUDA Runtime
+ * 对应平台: 摩尔线程 MTT S5000
+ * 编译器: mcc
+ * 运行时: MUSA Runtime
  */
 
 #include <iostream>
@@ -13,8 +13,7 @@
 #include <chrono>
 #include <cstring>
 #include <cmath>
-#include <cuda_runtime.h>
-#include <curand_kernel.h>
+#include "../include/photon_sim.cuh"
 #include "../include/types.h"
 #include "../include/utils.h"
 

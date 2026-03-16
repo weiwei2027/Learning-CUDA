@@ -48,8 +48,8 @@ else ifeq ($(PLATFORM),metax)
 else ifeq ($(PLATFORM),moore)
     # Moore MTT S5000 (摩尔线程)
     CXX = mcc
-    CXXFLAGS = -O3 -arch=mp_21 -std=c++11 -DMOORE_PLATFORM $(INCLUDES)
-    LDFLAGS = -lmusart -lmusa_rand
+    CXXFLAGS = -std=c++11 -O3 -DPLATFORM_MOORE $(INCLUDES) -I/usr/local/musa/include -fPIC
+    LDFLAGS = -L/usr/lib/gcc/x86_64-linux-gnu/11/ -L/usr/local/musa/lib -lmusart
     MAIN_SRC = src/photon_sim_moore.mu
     TARGET = photon_sim_moore
     
