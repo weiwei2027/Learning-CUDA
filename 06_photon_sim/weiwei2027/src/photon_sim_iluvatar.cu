@@ -1,11 +1,11 @@
 /**
- * @file photon_sim_nv.cpp
- * @brief NVIDIA CUDA 光子传输模拟 - 平台特定实现
+ * @file photon_sim_iluvatar.cu
+ * @brief Iluvatar CoreX BI-V100 光子传输模拟 - 平台特定实现
  * @author weiwei2027
  * 
- * 对应平台: NVIDIA GPU (A100, RTX系列等)
- * 编译器: nvcc
- * 运行时: CUDA Runtime
+ * 对应平台: 天數智芯 CoreX BI-V100
+ * 编译器: clang++
+ * 运行时: CUDA Runtime (兼容层)
  */
 
 #include <iostream>

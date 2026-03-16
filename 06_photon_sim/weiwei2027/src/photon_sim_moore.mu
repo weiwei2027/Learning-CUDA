@@ -1,6 +1,6 @@
 /**
- * @file photon_sim_nv.cpp
- * @brief NVIDIA CUDA 光子传输模拟 - 平台特定实现
+ * @file photon_sim_moore.mu
+ * @brief Moore Threads MTT S5000 光子传输模拟 - 平台特定实现
  * @author weiwei2027
  * 
  * 对应平台: 摩尔线程 MTT S5000

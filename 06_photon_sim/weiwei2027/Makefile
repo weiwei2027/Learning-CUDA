@@ -40,7 +40,7 @@ else ifeq ($(PLATFORM),iluvatar)
 else ifeq ($(PLATFORM),metax)
     # MetaX C500 (沐曦)
     CXX = mxcc
-    CXXFLAGS = -std=c++17 -O3 -DMETAX_PLATFORM $(INCLUDES) -I/opt/maca/include
+    CXXFLAGS = -std=c++17 -O3 -DPLATFORM_METAX $(INCLUDES) -I/opt/maca/include -fPIC
     LDFLAGS = -L/opt/maca/lib
     MAIN_SRC = src/photon_sim_metax.maca
     TARGET = photon_sim_metax

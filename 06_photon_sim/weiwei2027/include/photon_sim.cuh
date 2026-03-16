@@ -17,7 +17,7 @@
 // 平台检测与头文件包含
 // ============================================================================
 
-#if defined(METAX_PLATFORM)
+#if defined(PLATFORM_METAX)
     // ==================== MetaX 平台 (沐曦) ====================
     #include <mcr/mc_runtime.h>
     #include <mcrand/mcrand_kernel.h>
