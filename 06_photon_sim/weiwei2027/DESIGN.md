@@ -289,22 +289,32 @@ float path_length = dz / fabsf(photon_dz);
 
 ```
 06_photon_sim/weiwei2027/
-├── include/                    # 公共头文件
-│   ├── types.h                 # 数据结构定义
-│   └── utils.h                 # 工具函数接口（几何、材料、IO）
-├── src/                        # 源码实现
-│   ├── main.cu                 # GPU版本主程序
-│   ├── photon_sim_cpu.cpp      # CPU基准版本
-│   ├── photon_sim.cu/.cuh      # CUDA核函数
-│   ├── utils.cpp               # 工具函数实现（纯C++）
-│   └── Makefile                # 备用Makefile
-├── tests/                      # 单元测试
-│   └── test_parser.cpp         # 解析模块测试
-├── data/                       # 输入数据
-│   ├── geometry.txt            # 几何定义
-│   ├── materials.csv           # 材料参数
-│   └── source.txt              # 源参数
-└── CMakeLists.txt              # CMake构建配置
+├── src/                         # 源代码
+│   ├── photon_sim_nv.cu         # NVIDIA 版本
+│   ├── photon_sim_iluvatar.cu   # Iluvatar 版本
+│   ├── photon_sim_metax.maca    # MetaX 版本
+│   ├── photon_sim_moore.mu      # Moore 版本
+│   ├── photon_sim_cpu.cpp       # CPU 基准版本
+│   └── utils.cpp                # 工具函数实现
+├── include/                     # 头文件
+│   ├── types.h                  # 数据结构定义
+│   ├── utils.h                  # 工具函数接口
+│   └── photon_sim.cuh           # 平台抽象层
+├── data/                        # 测试数据
+│   ├── geometry_1layer.txt      # 单层几何
+│   ├── geometry_3layer.txt      # 三层几何
+│   ├── geometry_3layer_sphere.txt  # 带球体几何
+│   ├── materials.csv            # 材料参数
+│   └── source_*.txt             # 源配置
+├── scripts/                     # 可视化脚本
+│   ├── visualize.py
+│   ├── visualize_geometry_mpl.py
+│   └── generate_report_figures.py
+├── report/                      # 技术报告
+│   ├── REPORT.md                # 主报告
+│   └── figures/                 # 图表
+├── Makefile                     # 多平台构建
+└── CMakeLists.txt               # CMake构建配置
 ```
 
 ### 6.2 数据结构
@@ -346,17 +356,22 @@ struct Detector {
 
 **CMake配置要点**：
 - CUDA标准：C++17
-- 架构：sm_61 (GTX 1060)
+- 架构：sm_89 (RTX 4090), sm_80 (A100)
 - 分离编译：启用 CUDA_SEPARABLE_COMPILATION
 - 自动拷贝 data 目录到构建目录
 
-**构建命令**（推荐使用 Release 模式进行性能测试）：
+**构建命令**（多平台支持）：
 ```bash
-cd cmake-build-release
-cmake -DCMAKE_BUILD_TYPE=Release .. && make
-./06_photon_sim/weiwei2027/photon_sim      # GPU版本
-./06_photon_sim/weiwei2027/photon_sim_cpu  # CPU版本
-./06_photon_sim/weiwei2027/test_parser     # 单元测试
+# NVIDIA平台
+make PLATFORM=nvidia
+
+# 其他平台
+make PLATFORM=iluvatar   # 天數智芯
+make PLATFORM=metax      # 沐曦
+make PLATFORM=moore      # 摩尔线程
+
+./photon_sim_nv      # GPU版本
+./photon_sim_cpu     # CPU版本
 ```
 
 ---
@@ -365,11 +380,13 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && make
 
 ### 7.1 基准测试结果
 
-| 指标 | CPU (单线程) | GPU (GTX 1060) | 加速比 |
+| 指标 | CPU (单线程) | GPU (RTX 4090) | 加速比 |
 |------|-------------|----------------|--------|
-| 检测率 | 4.5849% | 4.5930% | - |
-| 处理速率 | 2.19×10⁶ photons/s | 2.39×10⁹ photons/s | **~10,900×** |
-| 运行时间 (10M光子) | 4.56s | 0.004s | - |
+| 检测率 | 2.76% | 2.76% | - |
+| 处理速率 (1B光子) | 1.63×10⁷ photons/s | 4.88×10¹⁰ photons/s | **~2,994×** |
+| 运行时间 (1B光子) | 61.4s | 0.0205s | - |
+
+> 测试环境：CPU Intel Core i9-13900K (32核), GPU RTX 4090 24GB, CUDA 13.0
 
 ### 7.2 算法一致性验证
 
@@ -411,13 +428,6 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && make
 - 精确剂量计算（需考虑散射）
 - 低能X射线(<30keV)
 - 复杂几何体模
-
-### 8.3 测试经验
-
-测试过程中的经验总结已记录在 `report/TESTING_NOTES.md`，包括：
-- 球体异物参数配置建议
-- 光子数量与测试时间参考
-- 其他测试注意事项
 
 ---
 
