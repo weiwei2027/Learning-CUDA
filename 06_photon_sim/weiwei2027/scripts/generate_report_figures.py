@@ -103,32 +103,39 @@ def generate_performance_comparison():
     """生成性能对比图"""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
-    # 平台性能对比
-    platforms = ['NVIDIA\nA100', 'Iluvatar\nBI100', 'MetaX\nC500']
-    rates = [11.1, 11.1, 7.01]  # 10^9 p/s
-    colors = ['#76b900', '#1f77b4', '#ff7f0e']  # NVIDIA绿, 蓝, 橙
+    # 平台性能对比 (修正后的数据 - 基于3layer测试，10亿光子)
+    # 实际测试数据:
+    #   A100 (3layer): 2.79e+10 p/s (0.0358s)
+    #   BI100 (3layer): 1.12e+10 p/s (0.0889s)
+    #   C500 (3layer): 7.43e+09 p/s (0.1345s)
+    #   RTX 4090 (3layer): 4.08e+10 p/s (0.0245s)
+    platforms = ['RTX 4090', 'NVIDIA\nA100', 'Iluvatar\nBI100', 'MetaX\nC500']
+    rates = [40.8, 27.9, 11.2, 7.43]  # 10^9 p/s (3layer配置)
+    colors = ['#e74c3c', '#76b900', '#1f77b4', '#ff7f0e']  # 红, NVIDIA绿, 蓝, 橙
     
     bars = axes[0].bar(platforms, rates, color=colors, edgecolor='black', linewidth=1.5)
     axes[0].set_ylabel('Processing Rate (10⁹ photons/sec)', fontsize=11)
-    axes[0].set_title('Multi-Platform Performance Comparison\n(1 Billion Photons)', 
+    axes[0].set_title('Multi-Platform Performance Comparison\n(1 Billion Photons, 3-Layer)', 
                       fontsize=12, fontweight='bold')
-    axes[0].set_ylim(0, 13)
+    axes[0].set_ylim(0, 45)
     axes[0].grid(axis='y', alpha=0.3)
     
     # 添加数值标签
     for bar, rate in zip(bars, rates):
         height = bar.get_height()
         axes[0].text(bar.get_x() + bar.get_width()/2., height,
-                    f'{rate:.2f}',
+                    f'{rate:.1f}',
                     ha='center', va='bottom', fontsize=10, fontweight='bold')
     
-    # 加速比对比
-    speedups = [1175, 1175, 890]
+    # 加速比对比 (基于实际CPU测试计算)
+    # CPU时间: A100=135.9s, BI100=151.3s, C500=89.1s, RTX4090=61.4s
+    # 加速比 = CPU_time / GPU_time
+    speedups = [2505, 3791, 1694, 663]
     bars2 = axes[1].bar(platforms, speedups, color=colors, edgecolor='black', linewidth=1.5)
     axes[1].set_ylabel('Speedup vs CPU (×)', fontsize=11)
     axes[1].set_title('GPU Speedup over CPU\n(Single-threaded Baseline)', 
                       fontsize=12, fontweight='bold')
-    axes[1].set_ylim(0, 1300)
+    axes[1].set_ylim(0, 4200)
     axes[1].grid(axis='y', alpha=0.3)
     
     # 添加数值标签
@@ -147,15 +154,19 @@ def generate_scaling_analysis():
     """生成扩展性分析图"""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     
-    # 不同光子数下的性能
+    # 不同光子数下的性能 (基于RTX 4090实际测试数据: 3layer配置)
+    # 测试数据来自 results/RTX4090/3layer_gpu_*/performance.log:
+    #   10M光子: 0.0002s -> 4.28e+10 p/s
+    #   100M光子: 0.0021s -> 4.80e+10 p/s
+    #   1B光子: 0.0205s -> 4.88e+10 p/s
     photon_counts = np.array([1e7, 1e8, 1e9])  # 10M, 100M, 1B
-    times = np.array([0.24, 2.4, 24])  # ms (RTX 4090数据)
+    times = np.array([0.2, 2.1, 20.5])  # ms (RTX 4090实际测试数据)
     rates = photon_counts / (times / 1000) / 1e10  # 单位: 10^10 p/s
     
     ax.plot(photon_counts / 1e6, rates, 'o-', linewidth=2, markersize=10, 
             color='#1f77b4', label='Processing Rate')
-    ax.axhline(y=4.23, color='r', linestyle='--', linewidth=2, 
-               label='Peak Rate: 4.23×10¹⁰ p/s')
+    ax.axhline(y=4.88, color='r', linestyle='--', linewidth=2, 
+               label='Peak Rate: 4.88×10¹⁰ p/s')
     
     ax.set_xlabel('Number of Photons (Millions)', fontsize=11)
     ax.set_ylabel('Processing Rate (10¹⁰ photons/sec)', fontsize=11)
@@ -193,8 +204,8 @@ def generate_geometry_diagram():
     sphere_center_z = 5.0
     sphere_radius = 2.0
     
-    # 绘制层
-    width = 10
+    # 绘制层 (探测器大小为 20x20 cm，因此层宽度应为 20)
+    width = 20  # 探测器宽度 20cm (从 -10 到 +10)
     for layer in layers:
         if layer['thickness'] > 0:
             rect = plt.Rectangle((-width/2, layer['z']), width, layer['thickness'],
@@ -213,17 +224,19 @@ def generate_geometry_diagram():
     ax.text(sphere_radius + 0.5, sphere_center_z, 'Hematoma\n(2.0 cm radius)', 
            va='center', fontsize=10, color='darkred', fontweight='bold')
     
-    # 绘制源和探测器
+    # 绘制源和探测器 (探测器大小 20x20 cm: 从 -10 到 +10)
     ax.plot(0, -1, 'y*', markersize=20, label='Point Source')
-    ax.plot([-5, 5], [17.5, 17.5], 'c-', linewidth=4, label='Detector')
+    ax.plot([-10, 10], [17.5, 17.5], 'c-', linewidth=4, label='Detector (20 cm)')
     
-    # 绘制示例光线（锥形束）
-    angles = np.linspace(-0.3, 0.3, 5)
+    # 绘制示例光线（锥形束）- 调整角度以覆盖 20cm 探测器
+    # 探测器边缘在 x=±10, z=17.5，源在 z=-1
+    # tan(angle) = 10 / 18.5 ≈ 0.54
+    angles = np.linspace(-0.5, 0.5, 5)
     for angle in angles:
-        x_end = 17.5 * np.tan(angle)
+        x_end = 18.5 * np.tan(angle)
         ax.plot([0, x_end], [-1, 17.5], 'g--', alpha=0.3, linewidth=1)
     
-    ax.set_xlim(-6, 8)
+    ax.set_xlim(-12, 14)
     ax.set_ylim(-2, 19)
     ax.set_aspect('equal')
     ax.set_xlabel('X Position (cm)', fontsize=11)
